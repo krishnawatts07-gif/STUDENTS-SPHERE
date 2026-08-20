@@ -1,0 +1,23 @@
+# Student Sphere - Project Dependencies & Setup
+# To install all dependencies on a new system, simply run:
+# npm install
+
+# Frontend & Core Libraries
+firebase@^12.18.0
+jspdf@^4.2.1
+pdfjs-dist@^6.2.108
+
+# AI & LLM Integrations
+@google/genai@^2.18.0
+@google/generative-ai@^0.24.1
+groq-sdk@^1.5.0
+
+# Backend & Server Microservices
+express@^5.2.1
+nodemailer@^9.0.5
+cors@^2.8.6
+dotenv@^17.4.2
+
+# Developer Tools & Bundlers
+vite@^8.2.2
+concurrently@^10.0.5
