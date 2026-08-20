@@ -286,6 +286,34 @@ $('chatMaximize')?.addEventListener('click', () => {
   }
 });
 
+function renderMarkdown(text) {
+  if (!text) return '';
+  let html = escapeHtml(text);
+
+  // Headers: ### Header, ## Header, # Header
+  html = html.replace(/^### (.*$)/gim, '<h4 style="margin:10px 0 4px;color:var(--green);font-weight:700;font-size:14px;">$1</h4>');
+  html = html.replace(/^## (.*$)/gim, '<h3 style="margin:12px 0 6px;color:var(--green);font-weight:700;font-size:15px;">$1</h3>');
+  html = html.replace(/^# (.*$)/gim, '<h2 style="margin:14px 0 6px;color:var(--green);font-weight:700;font-size:16px;">$1</h2>');
+
+  // Bold text: **text**
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--ink);font-weight:700;">$1</strong>');
+
+  // Inline code / tags: `code`
+  html = html.replace(/`(.*?)`/g, '<code style="background:#e6f0d9;color:#2f6b4b;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:12px;">$1</code>');
+
+  // Bullet points: - item or * item
+  html = html.replace(/^\s*[-*]\s+(.*$)/gim, '<li style="margin-left:18px;margin-bottom:4px;list-style-type:disc;">$1</li>');
+
+  // Numbered lists: 1. item
+  html = html.replace(/^\s*(\d+)\.\s+(.*$)/gim, '<div style="margin-left:14px;margin-bottom:4px;"><strong>$1.</strong> $2</div>');
+
+  // Paragraph breaks & line breaks
+  html = html.replace(/\n\n/g, '<div style="height:8px;"></div>');
+  html = html.replace(/\n/g, '<br>');
+
+  return html;
+}
+
 // Career-oriented AI Chat Assistant
 $('chatForm').addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -295,7 +323,7 @@ $('chatForm').addEventListener('submit', async (event) => {
   $('messages').insertAdjacentHTML('beforeend', `<div class="message user">${escapeHtml(text)}</div>`);
   $('chatInput').value = '';
 
-  const contextualPrompt = `${profileContext()}\n\nStudent Career Request: ${text}`;
+  const contextualPrompt = `${profileContext()}\n\nStudent Request (Academics / Skills / Career / Profile Guidance): ${text}`;
   try {
     let reply;
     try {
@@ -309,7 +337,9 @@ $('chatForm').addEventListener('submit', async (event) => {
         reply = result.summary || `Recommended career skills to highlight: ${(result.skills || []).join(', ')}.`;
       }
     }
-    $('messages').insertAdjacentHTML('beforeend', `<div class="message">${escapeHtml(reply)}</div>`);
+    $('messages').insertAdjacentHTML('beforeend', `<div class="message">${renderMarkdown(reply)}</div>`);
+    const msgContainer = $('messages');
+    if (msgContainer) msgContainer.scrollTop = msgContainer.scrollHeight;
     chatHistory.push({ role: 'user', content: text }, { role: 'assistant', content: reply });
   } catch {
     $('messages').insertAdjacentHTML('beforeend', '<div class="message">The career advisor is temporarily unavailable. You can still manage your skills and achievements.</div>');
