@@ -23,8 +23,8 @@ export const sendChatMessage = async (history = [], newMessage) => {
       throw new Error("newMessage must be a non-empty string.");
     }
 
-    // Get the gemini-1.5-flash model instance
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // Get the gemini-3.6-flash model instance
+    const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
 
     // Format input history to match @google/generative-ai SDK expectations:
     // [{ role: 'user' | 'model', parts: [{ text: string }] }]

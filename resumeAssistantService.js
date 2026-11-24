@@ -13,10 +13,13 @@ Scope of Guidance:
 3. Profile & Resume Optimization: Phrasing achievements with metrics, ATS resume reviews, project ideas, and portfolio building.
 4. Career & Internships: Career path exploration, role matching, job search strategies, interview preparation, and industry trends.
 
-Formatting Instructions (CRITICAL):
+Formatting Instructions:
 - ALWAYS structure your responses cleanly using Markdown headers (###), bullet points (-), bold key terms (**key concept**), and numbered lists.
 - NEVER output plain, unstructured walls of paragraph text.
-- Provide step-by-step actionable advice tailored to the student's profile context when provided.
+
+CRITICAL BEHAVIORAL DIRECTIVES:
+- DIRECT & SPECIFIC: Answer ONLY the user's specific question. Be extremely concise. Do not automatically dump career roadmaps or analyze their profile context unless explicitly asked.
+- GREETINGS: If the user says "hello", "hi", "hey", or another greeting, simply reply with a warm greeting and ask how you can help them, without analyzing their profile or listing recommendations.
 
 When the user explicitly asks to 'Generate Resume' or 'Create PDF', output their profile strictly as a valid JSON object matching:
 {
@@ -44,7 +47,7 @@ export const interactWithResumeAssistant = async (history = [], newMessage) => {
 
     // Configure model with System Instruction for system persona & behavior
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-3.6-flash",
       systemInstruction: RESUME_ASSISTANT_SYSTEM_PROMPT,
     });
 
@@ -88,6 +91,49 @@ export const interactWithResumeAssistant = async (history = [], newMessage) => {
     };
   } catch (error) {
     console.error("Error in interactWithResumeAssistant:", error.message);
+    throw error;
+  }
+};
+
+/**
+ * Interact with the Gemini advisor model using a stream for real-time word-by-word completion.
+ * @param {Array} history Chat history array.
+ * @param {string} newMessage Current user prompt.
+ * @param {Function} onChunk Callback function receiving (chunkText, accumulatedText).
+ * @returns {Promise<string>} Accumulated response text.
+ */
+export const interactWithResumeAssistantStream = async (history = [], newMessage, onChunk) => {
+  try {
+    if (!apiKey) {
+      throw new Error("VITE_GEMINI_API_KEY environment variable is missing.");
+    }
+
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.6-flash",
+      systemInstruction: RESUME_ASSISTANT_SYSTEM_PROMPT,
+    });
+
+    const formattedHistory = history.map((msg) => ({
+      role: msg.role === "assistant" || msg.role === "model" ? "model" : "user",
+      parts: [{ text: msg.text || msg.content || (typeof msg === "string" ? msg : "") }]
+    }));
+
+    const chat = model.startChat({
+      history: formattedHistory
+    });
+
+    const resultStream = await chat.sendMessageStream(newMessage);
+    let fullText = "";
+    for await (const chunk of resultStream.stream) {
+      const chunkText = chunk.text();
+      fullText += chunkText;
+      if (onChunk) {
+        onChunk(chunkText, fullText);
+      }
+    }
+    return fullText;
+  } catch (error) {
+    console.error("Error in interactWithResumeAssistantStream:", error.message);
     throw error;
   }
 };

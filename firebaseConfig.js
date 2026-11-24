@@ -25,6 +25,7 @@ enableIndexedDbPersistence(db).catch((err) => {
 });
 
 const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 /**
  * Sign in a user using Google OAuth Popup.

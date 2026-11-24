@@ -2,6 +2,8 @@ import {
   collection, 
   addDoc, 
   getDocs, 
+  getDoc,
+  setDoc,
   onSnapshot,
   updateDoc,
   deleteDoc,
@@ -166,3 +168,28 @@ export const subscribeToUserSkills = (userId, onChange, onError) => {
     onError
   );
 };
+
+export const saveUserProfile = async (userId, profileData) => {
+  if (!userId) throw new Error("userId is required.");
+  const profileRef = doc(db, "users", userId, "profile", "main");
+  await setDoc(profileRef, {
+    ...profileData,
+    updatedAt: serverTimestamp()
+  }, { merge: true });
+};
+
+export const getUserProfile = async (userId) => {
+  if (!userId) throw new Error("userId is required.");
+  const profileRef = doc(db, "users", userId, "profile", "main");
+  const snap = await getDoc(profileRef);
+  return snap.exists() ? snap.data() : null;
+};
+
+export const subscribeToUserProfile = (userId, onChange, onError) => {
+  if (!userId) return () => {};
+  const profileRef = doc(db, "users", userId, "profile", "main");
+  return onSnapshot(profileRef, (snap) => {
+    onChange(snap.exists() ? snap.data() : null);
+  }, onError);
+};
+
