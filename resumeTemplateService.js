@@ -488,7 +488,7 @@ export function buildResumeData(userProfile, user, userSkills, achievements) {
   return {
     name: profile.displayName || user?.displayName || user?.email?.split('@')[0] || 'Student Name',
     headline: profile.headline || 'Student & Aspiring Professional',
-    email: user?.email || '',
+    email: profile.email || user?.email || '',
     phone: profile.phone || '',
     location: profile.location || '',
     links: {
@@ -500,7 +500,8 @@ export function buildResumeData(userProfile, user, userSkills, achievements) {
     education: {
       degree: profile.degree || '',
       university: profile.university || '',
-      graduation: profile.graduation || ''
+      graduation: profile.graduation || '',
+      gpa: profile.gpa || ''
     },
     skills: skills.length > 0 ? skills : ['Problem Solving', 'Team Leadership', 'Project Management'],
     projects: projects.length > 0 ? projects : [

@@ -2075,21 +2075,21 @@
       <!-- Section: Profile & Skills -->
       <section id="profile" class="workspace-section" hidden>
         <div class="profile-layout">
-          <!-- Left Sidebar: Live Identity Preview Card -->
+          <!-- Left Column: Sticky Live Identity Preview Card & Strength Tips -->
           <div style="display:flex; flex-direction:column; gap:20px;">
             <div class="profile-card">
               <!-- Avatar Container with File Uploader Trigger -->
               <div class="profile-avatar-container" onclick="document.getElementById('profilePicInput').click()" title="Click to upload profile picture">
                 <div class="profile-avatar-img" id="profileAvatarPreview">S</div>
                 <div class="profile-avatar-edit-badge">📷</div>
-                <input type="file" id="profilePicInput" accept="image/png, image/jpeg" style="display:none">
+                <input type="file" id="profilePicInput" accept="image/png, image/jpeg, image/webp" style="display:none">
               </div>
 
               <h3 id="cardDisplayName">Student Name</h3>
               <div class="profile-headline-text" id="cardHeadline">Aspiring Tech Professional</div>
               <p class="profile-bio-text" id="cardBio">Add a short bio to introduce yourself to advisors and recruiters.</p>
               
-              <!-- Professional Social Strip -->
+              <!-- Professional Social Strip (updates in real-time) -->
               <div class="profile-social-strip">
                 <a href="#" target="_blank" class="social-btn" id="linkLinkedIn" title="LinkedIn Profile">💼</a>
                 <a href="#" target="_blank" class="social-btn" id="linkGitHub" title="GitHub Profile">🐙</a>
@@ -2112,7 +2112,7 @@
               <!-- Completeness Meter -->
               <div class="profile-completeness">
                 <div class="profile-completeness-label">
-                  <span>Profile Completion</span>
+                  <span>Profile Strength</span>
                   <span id="completenessPercent">25%</span>
                 </div>
                 <div class="progress-bar-bg">
@@ -2121,58 +2121,54 @@
               </div>
             </div>
 
-            <!-- Skills Box directly under Card -->
-            <section class="section" style="padding:22px;">
-              <h3 style="font:700 17px 'Space Grotesk', sans-serif; color:var(--ink); margin-bottom:12px;">My Core Skills</h3>
-              <form id="addSkillForm" style="display:flex; gap:8px; margin-bottom:14px;">
-                <input id="skillInput" placeholder="e.g. JavaScript, Git, Python" required style="flex:1; padding:9px 12px; font-size:13.5px;">
-                <button type="submit" class="primary" style="width:auto; margin:0; padding:9px 14px; font-size:13.5px;">+ Add</button>
-              </form>
-              <div id="skillsList" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
-              <div id="skillMessage" class="error" style="margin-top:8px;"></div>
-
-              <!-- Preset Suggestions -->
-              <div class="preset-skills">
-                <span style="font-size:11px; color:var(--muted); font-weight:700; display:block; width:100%; margin-bottom:6px;">Suggested presets:</span>
-                <button type="button" class="preset-skill-btn" data-skill="Python">Python</button>
-                <button type="button" class="preset-skill-btn" data-skill="JavaScript">JavaScript</button>
-                <button type="button" class="preset-skill-btn" data-skill="React">React</button>
-                <button type="button" class="preset-skill-btn" data-skill="SQL">SQL</button>
-                <button type="button" class="preset-skill-btn" data-skill="Machine Learning">Machine Learning</button>
-                <button type="button" class="preset-skill-btn" data-skill="Git">Git</button>
-              </div>
-            </section>
+            <!-- Profile Guidance Card -->
+            <div class="section" style="padding:20px; background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg);">
+              <h4 style="font:700 14px 'Space Grotesk', sans-serif; color:var(--green); margin:0 0 10px; display:flex; align-items:center; gap:6px;">
+                <span>💡</span> ATS & Profile Strength Tips
+              </h4>
+              <ul style="margin:0; padding-left:18px; font-size:12.5px; color:var(--muted); line-height:1.6;">
+                <li>Keep your <strong>headline specific</strong> (e.g., <em>Full Stack Engineer</em>).</li>
+                <li>Add at least <strong>6 core technical skills</strong> for ATS resume matching.</li>
+                <li>Connect your <strong>GitHub & LinkedIn</strong> for verified recruiter checks.</li>
+                <li>Keep your contact email and phone number current.</li>
+              </ul>
+            </div>
           </div>
 
-          <!-- Right Sidebar: Form Stack -->
+          <!-- Right Column: Organized Profile Command Center -->
           <div class="profile-forms-stack">
-            <!-- 1. Personal & Contact Details -->
+            <!-- 1. Personal & Contact Information -->
             <div class="profile-form-section">
-              <h3>Personal Details</h3>
-              <p>Your primary identity information that will be used in resume building and career guidance.</p>
+              <h3>👤 Identity & Contact Details</h3>
+              <p class="card-subtext">Manage your personal information, contact address, and location.</p>
               
               <div class="row">
                 <div>
-                  <label for="profileDisplay">Full Name</label>
-                  <input id="profileDisplay" placeholder="Your full name">
+                  <label for="profileDisplay">Full Name *</label>
+                  <input id="profileDisplay" placeholder="Your full name" autocomplete="name">
                 </div>
                 <div>
-                  <label for="profileEmail">Email Address</label>
-                  <input id="profileEmail" readonly style="background:#f4f6f1; color:var(--muted); cursor:not-allowed;">
+                  <label for="profileEmail">Contact / Resume Email *</label>
+                  <input id="profileEmail" type="email" placeholder="you@university.edu" autocomplete="email">
                 </div>
               </div>
 
-              <label for="profileHeadline">Professional Headline / Tagline</label>
-              <input id="profileHeadline" placeholder="e.g. Computer Science Student | Aspiring Data Analyst">
-
-              <label for="profileBio">Brief Bio / Professional Summary</label>
-              <textarea id="profileBio" rows="3" placeholder="Tell advisors and recruiters a little about your studies, strengths, and career aspirations..."></textarea>
+              <div class="row">
+                <div>
+                  <label for="profilePhone">Phone Number</label>
+                  <input id="profilePhone" placeholder="e.g. +91 98765 43210" autocomplete="tel">
+                </div>
+                <div>
+                  <label for="profileLocation">Current City / Location</label>
+                  <input id="profileLocation" placeholder="e.g. Bangalore, India">
+                </div>
+              </div>
             </div>
 
-            <!-- 2. Academic Information -->
+            <!-- 2. Academic Background -->
             <div class="profile-form-section">
-              <h3>Academic Background</h3>
-              <p>Where you currently study and your focus areas.</p>
+              <h3>🎓 Education & Academics</h3>
+              <p class="card-subtext">Where you study, your academic program, and expected graduation.</p>
               
               <label for="profileUniversity">College / University Name</label>
               <input id="profileUniversity" placeholder="e.g. RNS Institute of Technology">
@@ -2180,38 +2176,119 @@
               <div class="row">
                 <div>
                   <label for="profileDegree">Degree & Major</label>
-                  <input id="profileDegree" placeholder="e.g. B.E. in CSE (AI & ML)">
+                  <input id="profileDegree" placeholder="e.g. B.E. in Computer Science & Engineering">
                 </div>
                 <div>
-                  <label for="profileGraduation">Graduation Year / Sem</label>
-                  <input id="profileGraduation" placeholder="e.g. 2026 or 6th Semester">
+                  <label for="profileGraduation">Graduation Year / Semester</label>
+                  <input id="profileGraduation" placeholder="e.g. 2026 (6th Semester)">
                 </div>
               </div>
 
-              <div class="row">
-                <div>
-                  <label for="profilePhone">Phone Number</label>
-                  <input id="profilePhone" placeholder="e.g. +91 98765 43210">
+              <label for="profileGPA">CGPA / Percentage / GPA</label>
+              <input id="profileGPA" placeholder="e.g. 8.8 / 10 CGPA or 85%">
+            </div>
+
+            <!-- 3. Professional Headline & Bio -->
+            <div class="profile-form-section">
+              <h3>💼 Headline & Professional Summary</h3>
+              <p class="card-subtext">Your career tagline and summary used across resumes and AI advisor guidance.</p>
+              
+              <label for="profileHeadline">Professional Headline / Tagline</label>
+              <input id="profileHeadline" placeholder="e.g. Full Stack Developer | AI & Cloud Enthusiast">
+              
+              <div style="margin: 8px 0 16px;">
+                <span style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;">Quick Tagline Presets:</span>
+                <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
+                  <button type="button" class="preset-skill-btn role-pill" data-role="Software Engineer">💻 Software Engineer</button>
+                  <button type="button" class="preset-skill-btn role-pill" data-role="Full Stack Developer">⚛️ Full Stack Dev</button>
+                  <button type="button" class="preset-skill-btn role-pill" data-role="AI & Machine Learning Engineer">🧠 AI/ML Engineer</button>
+                  <button type="button" class="preset-skill-btn role-pill" data-role="Data Analyst">📊 Data Analyst</button>
+                  <button type="button" class="preset-skill-btn role-pill" data-role="Cloud & DevOps Engineer">☁️ Cloud & DevOps</button>
                 </div>
-                <div>
-                  <label for="profileLocation">Location / City</label>
-                  <input id="profileLocation" placeholder="e.g. Bangalore, India">
+              </div>
+
+              <div style="display:flex; justify-content:space-between; align-items:baseline; margin-top:14px;">
+                <label for="profileBio" style="margin:0;">Brief Bio / Professional Summary</label>
+                <button type="button" id="enhanceBioBtn" class="link-btn" style="font-size:12px; font-weight:700;">✨ Polish Bio with AI</button>
+              </div>
+              <textarea id="profileBio" rows="3" style="margin-top:6px;" placeholder="Tell advisors and recruiters a little about your studies, strengths, and career aspirations..."></textarea>
+            </div>
+
+            <!-- 4. Core Skills & Competencies -->
+            <div class="profile-form-section">
+              <h3>⚡ Core Skills & Tech Stack</h3>
+              <p class="card-subtext">Add skills individually or separate multiple skills with commas (e.g. React, Node.js, Python).</p>
+              
+              <form id="addSkillForm" style="display:flex; gap:10px; margin-bottom:16px;">
+                <input id="skillInput" placeholder="Type a skill or comma-separated list (e.g. React, Node.js, Python)" style="flex:1; padding:11px 14px;">
+                <button type="submit" class="primary" style="width:auto; margin:0; padding:11px 20px;">+ Add Skills</button>
+              </form>
+
+              <!-- Active Skills Chip Grid -->
+              <div id="skillsList" style="display:flex; flex-wrap:wrap; gap:8px; min-height:42px; padding:12px; background:#fbfcf8; border:1px solid var(--line-subtle); border-radius:var(--radius-sm);"></div>
+              <div id="skillMessage" class="error" style="margin-top:6px;"></div>
+
+              <!-- Categorized Skill Presets -->
+              <div class="skill-category-group" style="margin-top:16px;">
+                <span class="skill-category-title">💻 Programming Languages</span>
+                <div class="preset-skills" style="margin-top:0; padding-top:4px; border:0;">
+                  <button type="button" class="preset-skill-btn" data-skill="Python">Python</button>
+                  <button type="button" class="preset-skill-btn" data-skill="JavaScript">JavaScript</button>
+                  <button type="button" class="preset-skill-btn" data-skill="TypeScript">TypeScript</button>
+                  <button type="button" class="preset-skill-btn" data-skill="Java">Java</button>
+                  <button type="button" class="preset-skill-btn" data-skill="C++">C++</button>
+                  <button type="button" class="preset-skill-btn" data-skill="SQL">SQL</button>
+                </div>
+              </div>
+
+              <div class="skill-category-group">
+                <span class="skill-category-title">⚛️ Frameworks & Libraries</span>
+                <div class="preset-skills" style="margin-top:0; padding-top:4px; border:0;">
+                  <button type="button" class="preset-skill-btn" data-skill="React">React</button>
+                  <button type="button" class="preset-skill-btn" data-skill="Next.js">Next.js</button>
+                  <button type="button" class="preset-skill-btn" data-skill="Node.js">Node.js</button>
+                  <button type="button" class="preset-skill-btn" data-skill="Express.js">Express.js</button>
+                  <button type="button" class="preset-skill-btn" data-skill="Tailwind CSS">Tailwind CSS</button>
+                  <button type="button" class="preset-skill-btn" data-skill="Django">Django</button>
+                </div>
+              </div>
+
+              <div class="skill-category-group">
+                <span class="skill-category-title">🛠️ Tools, Cloud & Databases</span>
+                <div class="preset-skills" style="margin-top:0; padding-top:4px; border:0;">
+                  <button type="button" class="preset-skill-btn" data-skill="Git & GitHub">Git & GitHub</button>
+                  <button type="button" class="preset-skill-btn" data-skill="Docker">Docker</button>
+                  <button type="button" class="preset-skill-btn" data-skill="Firebase">Firebase</button>
+                  <button type="button" class="preset-skill-btn" data-skill="AWS">AWS</button>
+                  <button type="button" class="preset-skill-btn" data-skill="PostgreSQL">PostgreSQL</button>
+                  <button type="button" class="preset-skill-btn" data-skill="MongoDB">MongoDB</button>
+                </div>
+              </div>
+
+              <div class="skill-category-group">
+                <span class="skill-category-title">🧠 AI, Data & Soft Skills</span>
+                <div class="preset-skills" style="margin-top:0; padding-top:4px; border:0;">
+                  <button type="button" class="preset-skill-btn" data-skill="Machine Learning">Machine Learning</button>
+                  <button type="button" class="preset-skill-btn" data-skill="Data Analysis">Data Analysis</button>
+                  <button type="button" class="preset-skill-btn" data-skill="Problem Solving">Problem Solving</button>
+                  <button type="button" class="preset-skill-btn" data-skill="Team Leadership">Team Leadership</button>
+                  <button type="button" class="preset-skill-btn" data-skill="Agile / Scrum">Agile / Scrum</button>
                 </div>
               </div>
             </div>
 
-            <!-- 3. Professional Links -->
+            <!-- 5. Professional Links & Profiles -->
             <div class="profile-form-section">
-              <h3>Professional Profiles</h3>
-              <p>Add your career development links to attach to your resumes.</p>
+              <h3>🌐 Online Profiles & Portfolios</h3>
+              <p class="card-subtext">Connect your coding profiles, portfolio, and professional networks.</p>
 
-              <label for="profileLinkedIn">LinkedIn Profile URL</label>
+              <label for="profileLinkedIn">LinkedIn Username or URL</label>
               <div class="social-input-wrap">
                 <span class="social-input-icon">linkedin.com/in/</span>
                 <input id="profileLinkedIn" placeholder="username" autocomplete="off">
               </div>
 
-              <label for="profileGitHub">GitHub Profile URL</label>
+              <label for="profileGitHub">GitHub Username</label>
               <div class="social-input-wrap">
                 <span class="social-input-icon">github.com/</span>
                 <input id="profileGitHub" placeholder="username" autocomplete="off">
@@ -2220,19 +2297,26 @@
               <label for="profileWebsite">Portfolio or Personal Website URL</label>
               <div class="social-input-wrap">
                 <span class="social-input-icon">https://</span>
-                <input id="profileWebsite" placeholder="portfolio.com" autocomplete="off">
+                <input id="profileWebsite" placeholder="myportfolio.dev" autocomplete="off">
               </div>
 
-              <label for="profileOtherLink">Other Profile URL (LeetCode / X / Kaggle)</label>
+              <label for="profileOtherLink">Coding Profile (LeetCode / HackerRank / Kaggle)</label>
               <div class="social-input-wrap">
                 <span class="social-input-icon">URL</span>
                 <input id="profileOtherLink" placeholder="https://leetcode.com/username" autocomplete="off">
               </div>
+            </div>
 
-              <div style="margin-top: 24px; display:flex; justify-content:flex-end;">
-                <button class="primary" id="saveProfile" style="width:auto; margin:0; padding:12px 28px;">Save All Profile Changes</button>
+            <!-- Sticky Save Bar -->
+            <div class="sticky-save-bar">
+              <div>
+                <strong style="color:var(--ink); font-size:14px;">Profile Changes</strong><br>
+                <small id="profileSaveStatus" style="color:var(--muted);">Fill out your information and save updates.</small>
               </div>
-              <div id="profileMessage" class="error" style="text-align:right;"></div>
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div id="profileMessage" class="error" style="margin:0;"></div>
+                <button class="primary" id="saveProfile" style="width:auto; margin:0; padding:12px 28px; font-size:14px;">💾 Save All Profile Changes</button>
+              </div>
             </div>
           </div>
         </div>

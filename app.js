@@ -51,11 +51,35 @@ function showDashboard(currentUser) {
   $('profileEmail').value = user.email || '';
   $('profileDisplay').value = user.displayName || '';
 
+  // Instant offline/cached profile and skills hydration
+  try {
+    const cachedProfile = localStorage.getItem(`studentsphere_profile_${user.uid}`);
+    if (cachedProfile) {
+      userProfile = JSON.parse(cachedProfile);
+      renderProfileUI();
+    }
+  } catch (e) {
+    console.warn("Cached profile parse error:", e);
+  }
+
+  try {
+    const cachedSkills = localStorage.getItem(`studentsphere_skills_${user.uid}`);
+    if (cachedSkills) {
+      userSkills = JSON.parse(cachedSkills);
+      renderSkills(userSkills);
+    }
+  } catch (e) {
+    console.warn("Cached skills parse error:", e);
+  }
+
   if (unsubscribeProfile) unsubscribeProfile();
   unsubscribeProfile = subscribeToUserProfile(
     user.uid,
     (profileData) => {
       userProfile = profileData || {};
+      try {
+        localStorage.setItem(`studentsphere_profile_${user.uid}`, JSON.stringify(userProfile));
+      } catch (e) {}
       renderProfileUI();
       refreshResumePreview();
     },
@@ -76,9 +100,72 @@ function showDashboard(currentUser) {
 
   if (unsubscribeSkills) unsubscribeSkills();
   unsubscribeSkills = subscribeToUserSkills(user.uid, (skillsList) => {
+    try {
+      localStorage.setItem(`studentsphere_skills_${user.uid}`, JSON.stringify(skillsList));
+    } catch (e) {}
     renderSkills(skillsList);
     refreshResumePreview();
-  }, () => message('Skills list unavailable.', 'skillMessage'));
+  }, (err) => {
+    console.warn("Live skills subscription notice:", err);
+    // Don't show blocking red error if we have skills or empty state
+    if (!userSkills || userSkills.length === 0) {
+      const cached = localStorage.getItem(`studentsphere_skills_${user.uid}`);
+      if (cached) {
+        try {
+          renderSkills(JSON.parse(cached));
+          return;
+        } catch (e) {}
+      }
+      renderSkills([]);
+    }
+  });
+}
+
+function syncLiveProfileCard() {
+  const displayName = $('profileDisplay')?.value.trim() || userProfile?.displayName || user?.displayName || user?.email?.split('@')[0] || 'Student Name';
+  const headline = $('profileHeadline')?.value.trim() || userProfile?.headline || 'Aspiring Professional';
+  const bio = $('profileBio')?.value.trim() || userProfile?.bio || 'Add a short bio to introduce yourself to advisors and recruiters.';
+
+  if ($('cardDisplayName')) $('cardDisplayName').textContent = displayName;
+  if ($('cardHeadline')) $('cardHeadline').textContent = headline;
+  if ($('cardBio')) $('cardBio').textContent = bio;
+
+  // Topbar display name sync
+  if ($('userName')) $('userName').textContent = displayName;
+
+  // Avatar handling
+  const avatarText = (displayName[0] || 'S').toUpperCase();
+  const avatarPreview = $('profileAvatarPreview');
+  const mainAvatar = $('avatar');
+
+  if (userProfile?.avatarUrl) {
+    if (avatarPreview) avatarPreview.innerHTML = `<img src="${userProfile.avatarUrl}" class="profile-avatar-img" style="border:0;width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="Avatar">`;
+    if (mainAvatar) {
+      mainAvatar.innerHTML = `<img src="${userProfile.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="Avatar">`;
+      mainAvatar.style.background = 'none';
+    }
+  } else {
+    if (avatarPreview) {
+      avatarPreview.textContent = avatarText;
+      avatarPreview.style.background = 'var(--coral)';
+    }
+    if (mainAvatar) {
+      mainAvatar.textContent = avatarText;
+      mainAvatar.style.background = 'var(--coral)';
+    }
+  }
+
+  // Social Links Stripe Live Updates
+  updateSocialLinkButton('linkLinkedIn', $('profileLinkedIn')?.value || userProfile?.linkedin, 'https://linkedin.com/in/');
+  updateSocialLinkButton('linkGitHub', $('profileGitHub')?.value || userProfile?.github, 'https://github.com/');
+  updateSocialLinkButton('linkWebsite', $('profileWebsite')?.value || userProfile?.website, 'https://');
+  updateSocialLinkButton('linkOther', $('profileOtherLink')?.value || userProfile?.otherLink, '');
+
+  // Stats
+  if ($('statAchievementsCount')) $('statAchievementsCount').textContent = achievements.length;
+  if ($('statSkillsCount')) $('statSkillsCount').textContent = userSkills.length;
+
+  calculateProfileCompleteness();
 }
 
 function renderProfileUI() {
@@ -91,12 +178,14 @@ function renderProfileUI() {
     if (el && activeEl !== el) el.value = val || '';
   };
 
-  setVal('profileDisplay', userProfile.displayName || user.displayName || '');
+  setVal('profileDisplay', userProfile.displayName || user?.displayName || '');
+  setVal('profileEmail', userProfile.email || user?.email || '');
   setVal('profileHeadline', userProfile.headline || '');
   setVal('profileBio', userProfile.bio || '');
   setVal('profileUniversity', userProfile.university || '');
   setVal('profileDegree', userProfile.degree || '');
   setVal('profileGraduation', userProfile.graduation || '');
+  setVal('profileGPA', userProfile.gpa || '');
   setVal('profilePhone', userProfile.phone || '');
   setVal('profileLocation', userProfile.location || '');
   setVal('profileLinkedIn', userProfile.linkedin || '');
@@ -104,42 +193,7 @@ function renderProfileUI() {
   setVal('profileWebsite', userProfile.website || '');
   setVal('profileOtherLink', userProfile.otherLink || '');
 
-  // Update Live Card
-  const displayName = userProfile.displayName || user.displayName || user.email.split('@')[0];
-  $('cardDisplayName').textContent = displayName;
-  $('cardHeadline').textContent = userProfile.headline || 'Aspiring Professional';
-  $('cardBio').textContent = userProfile.bio || 'Add a short bio to introduce yourself to advisors and recruiters.';
-
-  // Topbar display name sync
-  $('userName').textContent = displayName;
-
-  // Avatar handling
-  const avatarText = (displayName[0] || 'S').toUpperCase();
-  const avatarPreview = $('profileAvatarPreview');
-  const mainAvatar = $('avatar');
-
-  if (userProfile.avatarUrl) {
-    avatarPreview.innerHTML = `<img src="${userProfile.avatarUrl}" class="profile-avatar-img" style="border:0;width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="Avatar">`;
-    mainAvatar.innerHTML = `<img src="${userProfile.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="Avatar">`;
-    mainAvatar.style.background = 'none';
-  } else {
-    avatarPreview.textContent = avatarText;
-    avatarPreview.style.background = 'var(--coral)';
-    mainAvatar.textContent = avatarText;
-    mainAvatar.style.background = 'var(--coral)';
-  }
-
-  // Social Links Stripe
-  updateSocialLinkButton('linkLinkedIn', userProfile.linkedin, 'https://linkedin.com/in/');
-  updateSocialLinkButton('linkGitHub', userProfile.github, 'https://github.com/');
-  updateSocialLinkButton('linkWebsite', userProfile.website, 'https://');
-  updateSocialLinkButton('linkOther', userProfile.otherLink, '');
-
-  // Stats
-  $('statAchievementsCount').textContent = achievements.length;
-  $('statSkillsCount').textContent = userSkills.length;
-
-  calculateProfileCompleteness();
+  syncLiveProfileCard();
 }
 
 function updateSocialLinkButton(btnId, value, prefix) {
@@ -161,51 +215,63 @@ function updateSocialLinkButton(btnId, value, prefix) {
 }
 
 function calculateProfileCompleteness() {
-  if (!userProfile) return;
   const fields = [
-    userProfile.displayName || user?.displayName,
-    userProfile.headline,
-    userProfile.bio,
-    userProfile.university,
-    userProfile.degree,
-    userProfile.graduation,
-    userProfile.phone,
-    userProfile.location,
-    userProfile.linkedin,
-    userProfile.github,
-    userProfile.website,
-    userProfile.avatarUrl
+    $('profileDisplay')?.value.trim() || userProfile?.displayName || user?.displayName,
+    $('profileEmail')?.value.trim() || userProfile?.email || user?.email,
+    $('profileHeadline')?.value.trim() || userProfile?.headline,
+    $('profileBio')?.value.trim() || userProfile?.bio,
+    $('profileUniversity')?.value.trim() || userProfile?.university,
+    $('profileDegree')?.value.trim() || userProfile?.degree,
+    $('profileGraduation')?.value.trim() || userProfile?.graduation,
+    $('profileGPA')?.value.trim() || userProfile?.gpa,
+    $('profilePhone')?.value.trim() || userProfile?.phone,
+    $('profileLocation')?.value.trim() || userProfile?.location,
+    $('profileLinkedIn')?.value.trim() || userProfile?.linkedin,
+    $('profileGitHub')?.value.trim() || userProfile?.github,
+    $('profileWebsite')?.value.trim() || userProfile?.website,
+    userProfile?.avatarUrl
   ];
 
-  const filledCount = fields.filter(f => f && f.trim && f.trim() !== '').length;
+  const filledCount = fields.filter(f => f && typeof f === 'string' && f.trim() !== '').length;
   const totalFields = fields.length + (userSkills.length > 0 ? 1 : 0) + (achievements.length > 0 ? 1 : 0);
-  const completionPercentage = Math.round((filledCount / (fields.length + 2)) * 100);
+  const completionPercentage = Math.round((filledCount / totalFields) * 100);
 
-  $('completenessPercent').textContent = `${Math.min(100, completionPercentage)}%`;
-  $('completenessFill').style.width = `${Math.min(100, completionPercentage)}%`;
+  if ($('completenessPercent')) $('completenessPercent').textContent = `${Math.min(100, completionPercentage)}%`;
+  if ($('completenessFill')) $('completenessFill').style.width = `${Math.min(100, completionPercentage)}%`;
 }
 
 function renderSkills(skillsList) {
-  userSkills = skillsList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  userSkills = (skillsList || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   const container = $('skillsList');
   if (!container) return;
   if (!userSkills.length) {
-    container.innerHTML = '<span style="color:var(--muted);font-size:13px;">No skills added yet. Add your core skills above.</span>';
+    container.innerHTML = '<span style="color:var(--muted);font-size:13px;padding:4px 0;">No skills added yet. Add your core skills or select from the presets below.</span>';
     return;
   }
   container.innerHTML = userSkills.map((skill) => `
-    <span class="tag" style="padding:6px 12px;display:inline-flex;align-items:center;gap:6px;font-size:12px;background:#e6f0d9;color:#2f6b4b;border-radius:20px;font-weight:600;">
+    <span class="tag" style="padding:6px 12px;display:inline-flex;align-items:center;gap:6px;font-size:12px;background:#e6f0d9;color:#2f6b4b;border-radius:20px;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
       ${escapeHtml(skill.name)}
-      <button type="button" data-delete-skill="${skill.id}" aria-label="Delete ${escapeHtml(skill.name)}" style="border:0;background:none;color:#b64d39;font-weight:bold;cursor:pointer;padding:0 2px;font-size:14px;line-height:1;">×</button>
+      <button type="button" data-delete-skill="${skill.id}" aria-label="Delete ${escapeHtml(skill.name)}" style="border:0;background:none;color:#b64d39;font-weight:bold;cursor:pointer;padding:0 2px;font-size:14px;line-height:1;margin-left:2px;">×</button>
     </span>
   `).join('');
 
   container.querySelectorAll('[data-delete-skill]').forEach((btn) => {
     btn.addEventListener('click', async () => {
+      const skillId = btn.dataset.deleteSkill;
+      // Optimistic delete
+      userSkills = userSkills.filter(s => s.id !== skillId);
+      renderSkills(userSkills);
+      if (user?.uid) {
+        try {
+          localStorage.setItem(`studentsphere_skills_${user.uid}`, JSON.stringify(userSkills));
+        } catch (e) {}
+      }
       try {
-        await deleteSkill(user.uid, btn.dataset.deleteSkill);
+        if (skillId && !skillId.startsWith('temp_')) {
+          await deleteSkill(user.uid, skillId);
+        }
       } catch (err) {
-        message(err.message, 'skillMessage');
+        console.warn("Delete skill error:", err);
       }
     });
   });
@@ -875,34 +941,120 @@ if (searchClearBtn) {
 // Clear all filters button
 $('clearFiltersBtn')?.addEventListener('click', resetFilters);
 
-// Profile Settings
+// Profile Settings Live Sync Listeners
+[
+  'profileDisplay',
+  'profileEmail',
+  'profilePhone',
+  'profileLocation',
+  'profileUniversity',
+  'profileDegree',
+  'profileGraduation',
+  'profileGPA',
+  'profileHeadline',
+  'profileBio',
+  'profileLinkedIn',
+  'profileGitHub',
+  'profileWebsite',
+  'profileOtherLink'
+].forEach(id => {
+  $(id)?.addEventListener('input', () => {
+    syncLiveProfileCard();
+  });
+});
+
+// Role Tagline Pill Quick Presets
+document.querySelectorAll('.role-pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const role = btn.dataset.role;
+    if (!role) return;
+    const headlineInput = $('profileHeadline');
+    if (headlineInput) {
+      headlineInput.value = role;
+      syncLiveProfileCard();
+      headlineInput.focus();
+    }
+  });
+});
+
+// AI Bio Polish Button
+$('enhanceBioBtn')?.addEventListener('click', async () => {
+  const bioInput = $('profileBio');
+  if (!bioInput) return;
+  const headline = $('profileHeadline')?.value.trim() || 'Software Engineer';
+  const degree = $('profileDegree')?.value.trim() || 'Computer Science';
+  const skills = userSkills.map(s => s.name).slice(0, 8).join(', ');
+  const btn = $('enhanceBioBtn');
+  const prevText = btn.textContent;
+  btn.textContent = '✨ Polishing...';
+  btn.disabled = true;
+
+  try {
+    const prompt = `Write a compelling 2-3 sentence professional summary/bio for a student resume. Headline: ${headline}. Academic background: ${degree}. Core technical skills: ${skills || 'General Tech'}. Keep it concise, high-impact, and ATS-friendly. Return strictly plain text summary without quotes.`;
+    
+    const res = await sendAzureChatMessage([
+      { role: 'system', content: 'You are an expert career advisor and resume editor. Provide concise, impactful student bios with no preamble or quotes.' },
+      { role: 'user', content: prompt }
+    ]);
+    
+    if (res && res.trim()) {
+      bioInput.value = res.trim().replace(/^["']|["']$/g, '');
+      syncLiveProfileCard();
+      message('Bio polished with AI! Review and click Save.', 'profileMessage');
+      setTimeout(() => message('', 'profileMessage'), 4000);
+    }
+  } catch (err) {
+    console.error("Bio polish error:", err);
+    message('Could not polish bio automatically. Please try again.', 'profileMessage');
+    setTimeout(() => message('', 'profileMessage'), 3000);
+  } finally {
+    btn.textContent = prevText;
+    btn.disabled = false;
+  }
+});
+
 // Profile Settings Save
 $('saveProfile')?.addEventListener('click', async () => {
   message('', 'profileMessage');
-  const displayName = $('profileDisplay').value.trim();
+  const statusEl = $('profileSaveStatus');
+  if (statusEl) statusEl.textContent = 'Saving changes...';
+
+  const displayName = $('profileDisplay')?.value.trim();
   if (!displayName) {
     message('Full Name is required.', 'profileMessage');
+    if (statusEl) statusEl.textContent = 'Name is required';
     return;
   }
 
   const profileData = {
     displayName,
-    headline: $('profileHeadline').value.trim(),
-    bio: $('profileBio').value.trim(),
-    university: $('profileUniversity').value.trim(),
-    degree: $('profileDegree').value.trim(),
-    graduation: $('profileGraduation').value.trim(),
-    phone: $('profilePhone').value.trim(),
-    location: $('profileLocation').value.trim(),
-    linkedin: $('profileLinkedIn').value.trim(),
-    github: $('profileGitHub').value.trim(),
-    website: $('profileWebsite').value.trim(),
-    otherLink: $('profileOtherLink').value.trim()
+    email: $('profileEmail')?.value.trim() || user?.email || '',
+    phone: $('profilePhone')?.value.trim() || '',
+    location: $('profileLocation')?.value.trim() || '',
+    university: $('profileUniversity')?.value.trim() || '',
+    degree: $('profileDegree')?.value.trim() || '',
+    graduation: $('profileGraduation')?.value.trim() || '',
+    gpa: $('profileGPA')?.value.trim() || '',
+    headline: $('profileHeadline')?.value.trim() || '',
+    bio: $('profileBio')?.value.trim() || '',
+    linkedin: $('profileLinkedIn')?.value.trim() || '',
+    github: $('profileGitHub')?.value.trim() || '',
+    website: $('profileWebsite')?.value.trim() || '',
+    otherLink: $('profileOtherLink')?.value.trim() || ''
   };
 
   try {
+    userProfile = { ...userProfile, ...profileData };
+    if (user?.uid) {
+      try {
+        localStorage.setItem(`studentsphere_profile_${user.uid}`, JSON.stringify(userProfile));
+      } catch (e) {}
+    }
+
     await saveUserProfile(user.uid, profileData);
-    await updateProfile(user, { displayName });
+    if (displayName !== user.displayName) {
+      await updateProfile(user, { displayName }).catch(() => {});
+    }
 
     // Update global state & Topbar
     $('userName').textContent = displayName;
@@ -911,9 +1063,17 @@ $('saveProfile')?.addEventListener('click', async () => {
       $('avatar').textContent = avatarText;
     }
 
+    syncLiveProfileCard();
+    refreshResumePreview();
+
+    if (statusEl) statusEl.textContent = 'All changes saved to cloud';
     message('Profile saved successfully.', 'profileMessage');
-    setTimeout(() => message('', 'profileMessage'), 4000);
+    setTimeout(() => {
+      message('', 'profileMessage');
+      if (statusEl) statusEl.textContent = 'Ready to save changes';
+    }, 4000);
   } catch (error) {
+    if (statusEl) statusEl.textContent = 'Error saving profile';
     message(error.message, 'profileMessage');
   }
 });
@@ -934,7 +1094,14 @@ $('profilePicInput')?.addEventListener('change', async (event) => {
   try {
     message('Processing image...', 'profileMessage');
     const base64 = await readFileAsDataUrl(file);
+    userProfile = { ...userProfile, avatarUrl: base64 };
+    if (user?.uid) {
+      try {
+        localStorage.setItem(`studentsphere_profile_${user.uid}`, JSON.stringify(userProfile));
+      } catch (e) {}
+    }
     await saveUserProfile(user.uid, { avatarUrl: base64 });
+    syncLiveProfileCard();
     message('Profile photo updated!', 'profileMessage');
     setTimeout(() => message('', 'profileMessage'), 3000);
   } catch (err) {
@@ -942,46 +1109,86 @@ $('profilePicInput')?.addEventListener('change', async (event) => {
   }
 });
 
-// Skills Form Submit
+// Skills Form Submit (Multi-Add Comma-Separated Support)
 $('addSkillForm')?.addEventListener('submit', async (event) => {
   event.preventDefault();
   message('', 'skillMessage');
   const input = $('skillInput');
-  const skillName = input?.value.trim();
-  if (!skillName) return;
-  try {
-    const exists = userSkills.some(s => s.name.toLowerCase() === skillName.toLowerCase());
-    if (exists) {
-      message('Skill already added.', 'skillMessage');
-      setTimeout(() => message('', 'skillMessage'), 3000);
-      return;
+  const rawValue = input?.value.trim();
+  if (!rawValue) return;
+
+  const rawSkills = rawValue.split(',').map(s => s.trim()).filter(Boolean);
+  if (!rawSkills.length) return;
+
+  const newSkills = [];
+  for (const name of rawSkills) {
+    const exists = userSkills.some(s => s.name.toLowerCase() === name.toLowerCase()) ||
+                   newSkills.some(s => s.toLowerCase() === name.toLowerCase());
+    if (!exists) {
+      newSkills.push(name);
     }
-    await addSkill(user.uid, skillName);
-    input.value = '';
-    message('Skill added successfully.', 'skillMessage');
+  }
+
+  if (newSkills.length === 0) {
+    message('Skill(s) already in your list.', 'skillMessage');
+    setTimeout(() => message('', 'skillMessage'), 3000);
+    return;
+  }
+
+  input.value = '';
+
+  // Optimistic UI and local cache update
+  const tempSkills = [...userSkills];
+  newSkills.forEach(name => {
+    tempSkills.push({ id: 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4), name });
+  });
+  renderSkills(tempSkills);
+  if (user?.uid) {
+    try {
+      localStorage.setItem(`studentsphere_skills_${user.uid}`, JSON.stringify(tempSkills));
+    } catch (e) {}
+  }
+
+  try {
+    for (const name of newSkills) {
+      await addSkill(user.uid, name);
+    }
+    message(`Added ${newSkills.length} skill${newSkills.length > 1 ? 's' : ''}!`, 'skillMessage');
     setTimeout(() => message('', 'skillMessage'), 3000);
   } catch (error) {
+    console.warn("Add skill error:", error);
     message(error.message, 'skillMessage');
   }
 });
 
 // Preset Skill Tag Suggestions Listener
-document.querySelectorAll('.preset-skill-btn').forEach((btn) => {
+document.querySelectorAll('.preset-skill-btn[data-skill]').forEach((btn) => {
   btn.addEventListener('click', async () => {
-    const skillName = btn.dataset.skill;
+    const skillName = btn.dataset.skill?.trim();
     if (!skillName) return;
+    message('', 'skillMessage');
+    const exists = userSkills.some(s => s.name.toLowerCase() === skillName.toLowerCase());
+    if (exists) {
+      message(`${skillName} is already added.`, 'skillMessage');
+      setTimeout(() => message('', 'skillMessage'), 3000);
+      return;
+    }
+
+    // Optimistic UI and local cache update
+    const tempSkills = [...userSkills, { id: 'temp_' + Date.now(), name: skillName }];
+    renderSkills(tempSkills);
+    if (user?.uid) {
+      try {
+        localStorage.setItem(`studentsphere_skills_${user.uid}`, JSON.stringify(tempSkills));
+      } catch (e) {}
+    }
+
     try {
-      message('', 'skillMessage');
-      const exists = userSkills.some(s => s.name.toLowerCase() === skillName.toLowerCase());
-      if (exists) {
-        message('Skill already added.', 'skillMessage');
-        setTimeout(() => message('', 'skillMessage'), 3000);
-        return;
-      }
       await addSkill(user.uid, skillName);
       message(`Added ${skillName}!`, 'skillMessage');
       setTimeout(() => message('', 'skillMessage'), 3000);
     } catch (error) {
+      console.warn("Preset skill add error:", error);
       message(error.message, 'skillMessage');
     }
   });
