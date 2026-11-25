@@ -963,6 +963,14 @@ $('clearFiltersBtn')?.addEventListener('click', resetFilters);
   });
 });
 
+// Profile Accordion Dropdowns Expand/Collapse All
+$('expandAllSectionsBtn')?.addEventListener('click', () => {
+  document.querySelectorAll('.profile-accordion-card').forEach(card => card.open = true);
+});
+$('collapseAllSectionsBtn')?.addEventListener('click', () => {
+  document.querySelectorAll('.profile-accordion-card').forEach(card => card.open = false);
+});
+
 // Role Tagline Pill Quick Presets
 document.querySelectorAll('.role-pill').forEach(btn => {
   btn.addEventListener('click', () => {
