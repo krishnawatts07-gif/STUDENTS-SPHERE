@@ -7,6 +7,7 @@ import { BackendAPI } from './apiService.js';
 import { sendAzureChatMessage } from './azureAiService.js';
 import { extractPdfText } from './pdfTextService.js';
 import { jsPDF } from 'jspdf';
+import { renderResume, buildResumeData, exportResumePdf } from './resumeTemplateService.js';
 
 const categories = ['academic', 'certifications', 'competitions', 'workshops', 'projects', 'volunteering'];
 let user = null;
@@ -56,6 +57,7 @@ function showDashboard(currentUser) {
     (profileData) => {
       userProfile = profileData || {};
       renderProfileUI();
+      refreshResumePreview();
     },
     (err) => console.error("Error subscribing to profile:", err)
   );
@@ -67,12 +69,16 @@ function showDashboard(currentUser) {
     (records) => {
       achievements = records;
       updateAchievementsUI();
+      refreshResumePreview();
     },
     () => message('Live data is temporarily unavailable.', 'dataError')
   );
 
   if (unsubscribeSkills) unsubscribeSkills();
-  unsubscribeSkills = subscribeToUserSkills(user.uid, renderSkills, () => message('Skills list unavailable.', 'skillMessage'));
+  unsubscribeSkills = subscribeToUserSkills(user.uid, (skillsList) => {
+    renderSkills(skillsList);
+    refreshResumePreview();
+  }, () => message('Skills list unavailable.', 'skillMessage'));
 }
 
 function renderProfileUI() {
@@ -476,36 +482,45 @@ Achievements and profile records:
 ${JSON.stringify(records, null, 2)}`;
 }
 
-async function generateResume() {
-  const output = $('resumeOutput');
-  output.hidden = false;
-  if ($('resumeActions')) $('resumeActions').hidden = true;
-  output.textContent = 'Building your resume from your profile and skills...';
-  const prompt = `${profileContext()}\n\nCreate a complete ATS-friendly student resume in plain text with sections: Summary, Education, Skills, Projects, Certifications, Competitions, Workshops, Volunteering, and Achievements. Include all skills listed in the profile context under the Skills section. Return clean text ready to copy.`;
-  try {
-    const result = await interactWithResumeAssistant([], prompt);
-    generatedResumeText = result.isJson ? 'Parsed profile successfully.' : result.data;
-    output.textContent = generatedResumeText;
-    if ($('resumeActions')) $('resumeActions').hidden = false;
-  } catch (err) {
-    console.error("Resume generation failed:", err);
-    output.textContent = 'Resume generation is temporarily unavailable. Open the assistant and ask: Generate my resume.';
-  }
+let currentResumeTemplate = 'modern';
+let currentResumeColor = '#15803d';
+let aiResumeData = null;
+
+function refreshResumePreview() {
+  const container = $('resumeA4');
+  if (!container) return;
+  const baseData = buildResumeData(userProfile, user, userSkills, achievements);
+  const data = aiResumeData || baseData;
+  container.innerHTML = renderResume(currentResumeTemplate, data, currentResumeColor);
 }
 
-function downloadResumePdf() {
-  if (!generatedResumeText) return;
-  const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
-  const lines = pdf.splitTextToSize(generatedResumeText, 170);
-  let y = 20;
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(10.5);
-  lines.forEach((line) => {
-    if (y > 280) { pdf.addPage(); y = 20; }
-    pdf.text(line, 20, y);
-    y += 5.5;
-  });
-  pdf.save(`${(user?.displayName || 'student').toLowerCase().replace(/\s+/g, '_')}_resume.pdf`);
+async function enhanceResumeWithAi() {
+  const status = $('resumeAiStatus');
+  const btn = $('aiEnhanceResumeBtn');
+  if (status) status.hidden = false;
+  if (btn) btn.disabled = true;
+
+  try {
+    const prompt = `${profileContext()}\n\nEnhance and polish this student's resume for top ATS performance. Return strictly a JSON object with keys: summary (string, 2-3 compelling sentences), headline (string, powerful professional title), polishedProjects (array of {title, date, details}), polishedSkills (array of strings).`;
+    const aiResult = await BackendAPI.generateResumeData(prompt);
+    if (aiResult && typeof aiResult === 'object') {
+      const baseData = buildResumeData(userProfile, user, userSkills, achievements);
+      aiResumeData = {
+        ...baseData,
+        bio: aiResult.summary || baseData.bio,
+        headline: aiResult.headline || baseData.headline,
+        skills: aiResult.polishedSkills?.length ? aiResult.polishedSkills : baseData.skills,
+        projects: aiResult.polishedProjects?.length ? aiResult.polishedProjects : baseData.projects
+      };
+      refreshResumePreview();
+    }
+  } catch (e) {
+    console.error("AI Resume Enhance error:", e);
+    refreshResumePreview();
+  } finally {
+    if (status) status.hidden = true;
+    if (btn) btn.disabled = false;
+  }
 }
 
 function openForm(item = null) {
@@ -976,6 +991,9 @@ document.querySelectorAll('.preset-skill-btn').forEach((btn) => {
 document.querySelectorAll('[data-section]').forEach((button) => button.addEventListener('click', () => {
   document.querySelectorAll('[data-section]').forEach((item) => item.classList.toggle('active', item === button));
   document.querySelectorAll('.workspace-section').forEach((section) => section.hidden = section.id !== button.dataset.section);
+  if (button.dataset.section === 'resume') {
+    refreshResumePreview();
+  }
 }));
 
 // Floating Chat Assistant
@@ -1092,8 +1110,44 @@ document.querySelectorAll('.chat-chip').forEach((chip) => {
   });
 });
 
-document.querySelector('#resume .section').insertAdjacentHTML('beforeend', '<button class="add-btn" id="generateResume">Generate resume from my profile</button><div id="resumeActions" hidden style="margin-top:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;"><button class="google" id="downloadResume" style="width:auto;margin:0">📄 Download PDF</button></div><pre id="resumeOutput" hidden style="white-space:pre-wrap;background:#f5f3ec;border:1px solid #dfe4da;padding:16px;border-radius:6px;margin-top:18px;line-height:1.5"></pre>');
-$('generateResume').addEventListener('click', generateResume);
-$('downloadResume').addEventListener('click', async () => { downloadResumePdf(); });
+// Resume Builder Template & Color Selectors
+document.querySelectorAll('#templateSelector .template-pill').forEach((pill) => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('#templateSelector .template-pill').forEach(p => p.classList.toggle('active', p === pill));
+    currentResumeTemplate = pill.dataset.template || 'modern';
+    refreshResumePreview();
+  });
+});
+
+document.querySelectorAll('#colorSwatches .color-swatch').forEach((swatch) => {
+  swatch.addEventListener('click', () => {
+    document.querySelectorAll('#colorSwatches .color-swatch').forEach(s => s.classList.toggle('active', s === swatch));
+    currentResumeColor = swatch.dataset.color || '#15803d';
+    refreshResumePreview();
+  });
+});
+
+$('aiEnhanceResumeBtn')?.addEventListener('click', enhanceResumeWithAi);
+
+$('printResumeBtn')?.addEventListener('click', () => {
+  window.print();
+});
+
+$('downloadPdfBtn')?.addEventListener('click', async () => {
+  const btn = $('downloadPdfBtn');
+  const origHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span>⏳</span> Exporting PDF...';
+  try {
+    const name = userProfile?.displayName || user?.displayName || 'student';
+    await exportResumePdf($('resumeA4'), name, currentResumeTemplate);
+  } catch (err) {
+    console.error("PDF export failed:", err);
+    alert("Could not export PDF. Please use the Print / Vector PDF button instead.");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origHtml;
+  }
+});
 
 onAuthStateChanged(auth, (currentUser) => currentUser ? showDashboard(currentUser) : setView('auth'));
