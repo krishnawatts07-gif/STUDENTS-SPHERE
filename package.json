@@ -5,6 +5,8 @@
   "main": "firebaseConfig.js",
   "scripts": {
     "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "test": "node --env-file=.env test.js"
   },
   "keywords": [],
